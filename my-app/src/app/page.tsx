@@ -32,15 +32,6 @@ const CODE = {
   deploy:    `# Create project\ncurl -X POST http://localhost:9090/api/v1/projects \\\n  -H 'Content-Type: application/json' \\\n  -d '{ "name": "myapp", "repoUrl": "https://github.com/you/myapp", "branch": "main", "appPort": 3000 }'\n\n# Trigger first deploy\ncurl -X POST http://localhost:9090/api/v1/deploy \\\n  -H 'Content-Type: application/json' \\\n  -d '{ "projectId": "<id>" }'`,
 };
 
-const REPO_LAYOUT = `VersionGate/
-├── src/                  ← Fastify API + background services
-├── dashboard/            ← React/Vite SPA
-├── prisma/               ← PostgreSQL schema + migrations
-├── scripts/              ← CLI utilities (preflight, self-update, create-admin)
-├── docs/                 ← SETUP.md, ARCHITECTURE.md
-├── ecosystem.config.cjs  ← PM2 process definitions
-├── Dockerfile            ← Multi-stage Docker build (Node-based, legacy)
-└── docker-compose.yml    ← Dev/ops compose (app + postgres)`;
 
 type Tab = 'deploy' | 'bluegreen' | 'rollback';
 type SimState = 'blue-live' | 'green-live';
@@ -199,7 +190,6 @@ export default function Home() {
         <ul className={styles.navLinks}>
           <li><a href="#how-it-works">How it works</a></li>
           <li><a href="#features">Features</a></li>
-          <li><a href="#deep-dive">Deep-dive</a></li>
           <li><a href="#setup">Setup</a></li>
         </ul>
         <a href="https://github.com/dinexh/VersionGate" target="_blank" rel="noreferrer" className={styles.navGh}>
@@ -209,7 +199,7 @@ export default function Home() {
 
       {/* ── HERO ── */}
       <div className={styles.hero}>
-        <div className={styles.badge}>Updated deep-dive — Self-hosted</div>
+        <div className={styles.badge}>v1.0 — Self-hosted</div>
         <h1 className={styles.h1}>Deploy with <em>zero downtime.</em><br />Own your infra.</h1>
         <p className={styles.heroSub}>
           VersionGate is a self-hosted zero-downtime Docker deployment engine for single-server KVM/VPS setups.
@@ -520,132 +510,6 @@ export default function Home() {
 
       <hr className={styles.fullDivider} />
 
-      {/* ── TECHNICAL DEEP-DIVE ── */}
-      <section id="deep-dive" className={`${styles.section} ${styles.reveal}`}>
-        <p className={styles.sectionLabel}>// technical deep-dive</p>
-        <h2 className={styles.h2}>VersionGate — Full Technical Deep-Dive</h2>
-        <p className={styles.sectionSub}>
-          Vercel-style CI/CD on your own hardware: push to GitHub, deploy with blue-green switching, and recover safely with rollback + reconciliation.
-        </p>
-
-        <div className={styles.setupSteps}>
-          <div className={styles.setupStep}>
-            <div className={styles.setupNum}>1</div>
-            <div className={styles.setupContent}>
-              <div className={styles.setupTitle}>What it is</div>
-              <p className={styles.setupDesc}>
-                A self-hosted, zero-downtime Docker deployment engine for single-server KVM/VPS environments with a Fastify API, Bun worker, and React dashboard.
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.setupStep}>
-            <div className={styles.setupNum}>2</div>
-            <div className={styles.setupContent}>
-              <div className={styles.setupTitle}>Repository layout</div>
-              <div className={styles.codeBlock}>
-                <div className={styles.codeBlockHeader}>
-                  <span className={styles.codeBlockLang}>project tree</span>
-                  <CopyBtn codeKey="repoLayout" text={REPO_LAYOUT} />
-                </div>
-                <pre>{REPO_LAYOUT}</pre>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.setupStep}>
-            <div className={styles.setupNum}>3</div>
-            <div className={styles.setupContent}>
-              <div className={styles.setupTitle}>Runtime &amp; stack</div>
-              <div className={styles.codeBlock} style={{ padding: 0 }}>
-                <table className={styles.envTable}>
-                  <thead>
-                    <tr><th>Layer</th><th>Technology</th><th>Notes</th></tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      ['Runtime', 'Bun 1.x', 'Runtime + TypeScript transpilation'],
-                      ['API server', 'Fastify 4.x', 'REST API + route modules'],
-                      ['ORM', 'Prisma 5 + PostgreSQL 16', 'Local or Neon serverless'],
-                      ['WebSockets', '@fastify/websocket 10.0.1', 'Streams live job logs'],
-                      ['Static serving', '@fastify/static 6.x', 'Serves built React SPA'],
-                      ['Logging', 'Pino', 'Structured JSON logs'],
-                      ['Process manager', 'PM2', 'versiongate-api + versiongate-worker'],
-                      ['Dashboard', 'React 19 + Vite 8 + Tailwind 4 + shadcn/ui', 'UI + deploy monitoring'],
-                    ].map(([layer, tech, note]) => (
-                      <tr key={layer}>
-                        <td className={styles.envKey}>{layer}</td>
-                        <td className={styles.envDefault}>{tech}</td>
-                        <td className={styles.envDesc}>{note}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.setupStep}>
-            <div className={styles.setupNum}>4</div>
-            <div className={styles.setupContent}>
-              <div className={styles.setupTitle}>Database schema (Prisma)</div>
-              <p className={styles.setupDesc}>
-                <strong>User</strong>, <strong>Session</strong>, <strong>Project</strong>, <strong>Deployment</strong>, and <strong>Job</strong> models power auth, project config, deploy audit history, and async queue execution.
-              </p>
-              <div className={styles.codeBlock} style={{ padding: 16 }}>
-                <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text2)', lineHeight: 1.8 }}>
-                  <li><code>User</code>: dashboard accounts (email + scrypt password hash)</li>
-                  <li><code>Session</code>: SHA-256 token hash, 7-day expiry</li>
-                  <li><code>Project</code>: repo/branch/ports/env/encrypted secrets/deploy mutex</li>
-                  <li><code>Deployment</code>: immutable version/color/port/status audit trail</li>
-                  <li><code>Job</code>: DEPLOY/ROLLBACK queue, status lifecycle, live log buffer</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.setupStep}>
-            <div className={styles.setupNum}>5</div>
-            <div className={styles.setupContent}>
-              <div className={styles.setupTitle}>Process architecture</div>
-              <div className={styles.codeBlock} style={{ padding: 16 }}>
-                <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text2)', lineHeight: 1.8 }}>
-                  <li><code>versiongate-api</code>: serves <code>/api/v1</code>, setup flow, dashboard static assets, monitors, self-update polling</li>
-                  <li><code>versiongate-worker</code>: polls jobs every 2s, claims atomically, executes deploy/rollback, marks stale RUNNING jobs as FAILED on boot</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.setupStep}>
-            <div className={styles.setupNum}>6</div>
-            <div className={styles.setupContent}>
-              <div className={styles.setupTitle}>API surface and deploy pipeline</div>
-              <p className={styles.setupDesc}>
-                Route groups: Auth, Projects, Deployments, Jobs, Metrics, WebSocket Logs, System, Setup, Settings, Webhook.
-              </p>
-              <div className={styles.codeBlock}>
-                <div className={styles.codeBlockHeader}>
-                  <span className={styles.codeBlockLang}>deploy flow</span>
-                </div>
-                <pre>{`enqueueJob("DEPLOY") → Worker claims job
-  ├─ acquireLock(projectId)
-  ├─ GitService.prepareSource()
-  ├─ ensureDockerfile() if missing
-  ├─ choose idle color (BLUE/GREEN)
-  ├─ assign target port (basePort or basePort+1)
-  ├─ create Deployment(DEPLOYING)
-  ├─ docker build + docker run
-  ├─ health check + switch traffic
-  └─ retire previous slot or rollback on failure`}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <hr className={styles.fullDivider} />
-
       {/* ── SETUP ── */}
       <section id="setup" className={`${styles.section} ${styles.reveal}`}>
         <p className={styles.sectionLabel}>// setup</p>
@@ -813,7 +677,6 @@ export default function Home() {
           <li><a href="https://github.com/dinexh/VersionGate" target="_blank" rel="noreferrer">GitHub ↗</a></li>
           <li><a href="#how-it-works">How it works</a></li>
           <li><a href="#features">Features</a></li>
-          <li><a href="#deep-dive">Deep-dive</a></li>
           <li><a href="#setup">Setup</a></li>
         </ul>
       </footer>
